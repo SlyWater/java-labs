@@ -4,6 +4,7 @@
  */
 package lab1;
 
+import java.util.ArrayList;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -11,7 +12,8 @@ import javax.swing.table.DefaultTableModel;
  * @author slywater 
  */
 public class MainWindow extends javax.swing.JFrame {
-
+    
+    private static ArrayList<RecIntegral> tableContent = new ArrayList<>();
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MainWindow.class.getName());
 
     /**
@@ -44,6 +46,8 @@ public class MainWindow extends javax.swing.JFrame {
         LowLabel = new javax.swing.JLabel();
         HighLabel = new javax.swing.JLabel();
         StepLabel = new javax.swing.JLabel();
+        ClearTableButton = new javax.swing.JButton();
+        AddFromCollectionButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -86,8 +90,6 @@ public class MainWindow extends javax.swing.JFrame {
         formulaLabel.setText("f(x) = cos(x^2)");
 
         jPanel2.setBackground(new java.awt.Color(51, 51, 51));
-
-        LowLevelTextField.addActionListener(this::LowLevelTextFieldActionPerformed);
 
         LowLabel.setBackground(new java.awt.Color(255, 255, 255));
         LowLabel.setForeground(new java.awt.Color(255, 255, 255));
@@ -144,6 +146,12 @@ public class MainWindow extends javax.swing.JFrame {
                     .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
         );
 
+        ClearTableButton.setText("CLEAR TABLE");
+        ClearTableButton.addActionListener(this::ClearTableButtonActionPerformed);
+
+        AddFromCollectionButton.setText("ADD FROM COLLECTION");
+        AddFromCollectionButton.addActionListener(this::AddFromCollectionButtonActionPerformed);
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -151,12 +159,19 @@ public class MainWindow extends javax.swing.JFrame {
             .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(120, 120, 120)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(DeleteButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(AddButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(CalculateButton, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(120, 120, 120)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(DeleteButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(AddButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(CalculateButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(ClearTableButton, javax.swing.GroupLayout.PREFERRED_SIZE, 167, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(AddFromCollectionButton)))
                 .addContainerGap())
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(142, 142, 142)
@@ -178,7 +193,12 @@ public class MainWindow extends javax.swing.JFrame {
                 .addGap(18, 18, 18)
                 .addComponent(formulaLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 195, Short.MAX_VALUE))
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ClearTableButton)
+                    .addComponent(AddFromCollectionButton))
+                .addContainerGap())
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -189,17 +209,11 @@ public class MainWindow extends javax.swing.JFrame {
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 6, Short.MAX_VALUE))
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
-    private void LowLevelTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LowLevelTextFieldActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_LowLevelTextFieldActionPerformed
 
     private void AddButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddButtonActionPerformed
         double lowLimit, highLimit, step;
@@ -208,10 +222,13 @@ public class MainWindow extends javax.swing.JFrame {
         step = Double.parseDouble(StepTextField.getText());
         
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
-        tModel.addRow(new Object[] {lowLimit, highLimit, step});
-        LowLevelTextField.setText("");
-        HighLevelTextField.setText("");
-        StepTextField.setText("");
+        if(ResultTable.getRowCount() == tableContent.size()){
+            tModel.addRow(new Object[] {lowLimit, highLimit, step,0.0});
+            tableContent.add(new RecIntegral(lowLimit, highLimit, step));
+            LowLevelTextField.setText("");
+            HighLevelTextField.setText("");
+            StepTextField.setText("");
+        }
     }//GEN-LAST:event_AddButtonActionPerformed
 
     private void DeleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteButtonActionPerformed
@@ -220,21 +237,47 @@ public class MainWindow extends javax.swing.JFrame {
         int row = ResultTable.getSelectedRow();
         if(row!=-1){
             tModel.removeRow(row);
+            tableContent.remove(row);
         }
     }//GEN-LAST:event_DeleteButtonActionPerformed
 
     private void CalculateButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CalculateButtonActionPerformed
         // TODO add your handling code here:
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
-        
         int row = ResultTable.getSelectedRow();
-        Double lowLimit = Double.valueOf(tModel.getValueAt(row,0).toString());
-        Double highLimit = Double.valueOf(tModel.getValueAt(row,1).toString());
-        Double step = Double.valueOf(tModel.getValueAt(row,2).toString());
-        if(row != -1){
-            tModel.setValueAt(calculate(lowLimit,highLimit,step), row, 3);
+        if(row != -1 && ResultTable.getRowCount() == tableContent.size()){
+            double lowLimit = Double.parseDouble(tModel.getValueAt(row, 0).toString());
+            double highLimit = Double.parseDouble(tModel.getValueAt(row, 1).toString());
+            double step = Double.parseDouble(tModel.getValueAt(row, 2).toString());
+            RecIntegral ri = new RecIntegral(lowLimit,highLimit,step);
+            tableContent.set(row,ri);
+            tModel.setValueAt(tableContent.get(row).calculate(), row, 3);
         }
     }//GEN-LAST:event_CalculateButtonActionPerformed
+
+    private void ClearTableButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearTableButtonActionPerformed
+        // TODO add your handling code here:
+        DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
+        tModel.setRowCount(0);
+    }//GEN-LAST:event_ClearTableButtonActionPerformed
+
+    private void AddFromCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddFromCollectionButtonActionPerformed
+        // TODO add your handling code here:
+        
+        
+        DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
+        RecIntegral ri;
+        tModel.setRowCount(0);
+
+//        for(Iterator<RecIntegral> iter = tableContent.iterator();iter!=tableContent.getLast();iter.next()){
+//            tModel.addRow(new Object[] {iter.});
+//        }
+
+        for(int i = 0;i<tableContent.size();i++){
+            ri = tableContent.get(i);
+            tModel.addRow(new Object[] {ri.getLowLimit(), ri.getHighLimit(), ri.getStep(), ri.getResult()});
+        }
+    }//GEN-LAST:event_AddFromCollectionButtonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -261,23 +304,14 @@ public class MainWindow extends javax.swing.JFrame {
         java.awt.EventQueue.invokeLater(() -> new MainWindow().setVisible(true));
     }
 // 9 вариант cos(x^2)
-    
-    public double calculate(double lowLimit, double highLimit, double step){
-        double result = 0, xLast = 0;
-        for(double x = lowLimit; x < highLimit; x+=step){
-            if(x+step<=highLimit){
-                result += step * (Math.cos(x*x) + Math.cos((x+step)*(x+step)))/2;
-            }
-            xLast = x;
-        }
-        result += (highLimit - xLast) * (Math.cos(xLast * xLast) + Math.cos(highLimit * highLimit)) / 2;
-        return result;
-    }
+
     
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton AddButton;
+    private javax.swing.JButton AddFromCollectionButton;
     private javax.swing.JButton CalculateButton;
+    private javax.swing.JButton ClearTableButton;
     private javax.swing.JButton DeleteButton;
     private javax.swing.JLabel HighLabel;
     private javax.swing.JTextField HighLevelTextField;
@@ -292,3 +326,4 @@ public class MainWindow extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     // End of variables declaration//GEN-END:variables
 }
+
