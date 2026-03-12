@@ -1,29 +1,31 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package lab1;
 
-/**
- *
- * @author slywater
- */
 public class RecIntegral{
     private double lowLimit;
     private double highLimit;
     private double step;
-    private double result = 0.0;
+    private double result;
+    
+    //errors:
+    //1. step>HighLimit-lowLimit
+    //2. incorrect input(ttt,NULL)
+    //3. lowLimit>highLimit
+    //4. limits
+    
+    
+    // otchet v pdf!!!
     public RecIntegral(double lowLimit, double highLimit, double step){
-        this.highLimit=highLimit;
+        this.highLimit = highLimit;
         this.lowLimit = lowLimit;
         this.step = step;
+        this.result = 0.0;
     }
     public double calculate(){
         double xLast = 0;
         result = 0.;
-        for(double x = lowLimit; x < highLimit; x+=step){
-            if(x+step<=highLimit){
-                result += step * (Math.cos(x*x) + Math.cos((x+step)*(x+step)))/2;
+        for(double x = lowLimit; x < highLimit; x += step){
+            if(x + step <= highLimit){
+                result += step * (Math.cos(x * x) + Math.cos((x + step)*(x + step)))/2;
             }
             xLast = x;
         }

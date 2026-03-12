@@ -7,10 +7,6 @@ package lab1;
 import java.util.ArrayList;
 import javax.swing.table.DefaultTableModel;
 
-/**
- *
- * @author slywater 
- */
 public class MainWindow extends javax.swing.JFrame {
     
     private static ArrayList<RecIntegral> tableContent = new ArrayList<>();
@@ -223,7 +219,7 @@ public class MainWindow extends javax.swing.JFrame {
         
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         if(ResultTable.getRowCount() == tableContent.size()){
-            tModel.addRow(new Object[] {lowLimit, highLimit, step,0.0});
+            tModel.addRow(new Object[] {lowLimit, highLimit, step, 0.0});
             tableContent.add(new RecIntegral(lowLimit, highLimit, step));
             LowLevelTextField.setText("");
             HighLevelTextField.setText("");
@@ -232,25 +228,23 @@ public class MainWindow extends javax.swing.JFrame {
     }//GEN-LAST:event_AddButtonActionPerformed
 
     private void DeleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteButtonActionPerformed
-        // TODO add your handling code here:
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         int row = ResultTable.getSelectedRow();
-        if(row!=-1){
+        if(row != -1){
             tModel.removeRow(row);
             tableContent.remove(row);
         }
     }//GEN-LAST:event_DeleteButtonActionPerformed
 
     private void CalculateButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CalculateButtonActionPerformed
-        // TODO add your handling code here:
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         int row = ResultTable.getSelectedRow();
         if(row != -1 && ResultTable.getRowCount() == tableContent.size()){
             double lowLimit = Double.parseDouble(tModel.getValueAt(row, 0).toString());
             double highLimit = Double.parseDouble(tModel.getValueAt(row, 1).toString());
             double step = Double.parseDouble(tModel.getValueAt(row, 2).toString());
-            RecIntegral ri = new RecIntegral(lowLimit,highLimit,step);
-            tableContent.set(row,ri);
+            RecIntegral ri = new RecIntegral(lowLimit, highLimit, step);
+            tableContent.set(row, ri);
             tModel.setValueAt(tableContent.get(row).calculate(), row, 3);
         }
     }//GEN-LAST:event_CalculateButtonActionPerformed
@@ -262,16 +256,11 @@ public class MainWindow extends javax.swing.JFrame {
     }//GEN-LAST:event_ClearTableButtonActionPerformed
 
     private void AddFromCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddFromCollectionButtonActionPerformed
-        // TODO add your handling code here:
-        
+        // TODO add your handling code here:     
         
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         RecIntegral ri;
         tModel.setRowCount(0);
-
-//        for(Iterator<RecIntegral> iter = tableContent.iterator();iter!=tableContent.getLast();iter.next()){
-//            tModel.addRow(new Object[] {iter.});
-//        }
 
         for(int i = 0;i<tableContent.size();i++){
             ri = tableContent.get(i);
