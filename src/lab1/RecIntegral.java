@@ -13,6 +13,7 @@ public class RecIntegral{
     //4. limits
     
     
+      
     // otchet v pdf!!!
     public RecIntegral(double lowLimit, double highLimit, double step){
         this.highLimit = highLimit;
