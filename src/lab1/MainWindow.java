@@ -9,8 +9,7 @@ public class MainWindow extends javax.swing.JFrame {
     
     private static ArrayList<RecIntegral> tableContent = new ArrayList<>();
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MainWindow.class.getName());
-    private static final double MIN_VALUE=0.000001;
-    private static final double MAX_VALUE=1000000;
+
 
     public MainWindow() {
         initComponents();
@@ -205,29 +204,25 @@ public class MainWindow extends javax.swing.JFrame {
 
     private void AddButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddButtonActionPerformed
         double lowLimit, highLimit, step;
-        
-        try {
-            lowLimit = Double.parseDouble(LowLevelTextField.getText());
-            highLimit = Double.parseDouble(HighLevelTextField.getText());
-            step = Double.parseDouble(StepTextField.getText());
-            validateInput(lowLimit, highLimit, step);
-            DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
-            if(ResultTable.getRowCount() == tableContent.size()){
-                tModel.addRow(new Object[] {lowLimit, highLimit, step, 0.0});
+        lowLimit = Double.parseDouble(LowLevelTextField.getText());
+        highLimit = Double.parseDouble(HighLevelTextField.getText());
+        step = Double.parseDouble(StepTextField.getText());
+        DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
+        if(ResultTable.getRowCount() == tableContent.size()){
+            try {
                 tableContent.add(new RecIntegral(lowLimit, highLimit, step));
+                tModel.addRow(new Object[] {lowLimit, highLimit, step, 0.0});
                 LowLevelTextField.setText("");
                 HighLevelTextField.setText("");
                 StepTextField.setText("");
             }
+            catch (InvalidInputException e){
+                JOptionPane.showMessageDialog(this, e.getMessage(), "Error", ERROR_MESSAGE);
+            }
+            catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage() + "\nEnter a number.", "Error", ERROR_MESSAGE);            
+            }
         }
-        catch (InvalidInputException e){
-            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", ERROR_MESSAGE);
-        }
-        catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage() + "\nEnter a number.", "Error", ERROR_MESSAGE);            
-        }
-        
-
     }//GEN-LAST:event_AddButtonActionPerformed
 
     private void DeleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteButtonActionPerformed
@@ -243,12 +238,17 @@ public class MainWindow extends javax.swing.JFrame {
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         int row = ResultTable.getSelectedRow();
         if(row != -1 && ResultTable.getRowCount() == tableContent.size()){
-            double lowLimit = Double.parseDouble(tModel.getValueAt(row, 0).toString());
-            double highLimit = Double.parseDouble(tModel.getValueAt(row, 1).toString());
-            double step = Double.parseDouble(tModel.getValueAt(row, 2).toString());
-            RecIntegral ri = new RecIntegral(lowLimit, highLimit, step);
-            tableContent.set(row, ri);
-            tModel.setValueAt(tableContent.get(row).calculate(), row, 3);
+            try {
+                double lowLimit = Double.parseDouble(tModel.getValueAt(row, 0).toString());
+                double highLimit = Double.parseDouble(tModel.getValueAt(row, 1).toString());
+                double step = Double.parseDouble(tModel.getValueAt(row, 2).toString());
+                RecIntegral ri = new RecIntegral(lowLimit, highLimit, step);
+                tableContent.set(row, ri);
+                tModel.setValueAt(tableContent.get(row).calculate(), row, 3);
+            } 
+            catch (InvalidInputException | NumberFormatException e){
+                JOptionPane.showMessageDialog(this, e.getMessage() + "\nIncorrect data in the table", "Error", ERROR_MESSAGE);
+            }  
         }
     }//GEN-LAST:event_CalculateButtonActionPerformed
 
@@ -268,21 +268,7 @@ public class MainWindow extends javax.swing.JFrame {
             tModel.addRow(new Object[] {ri.getLowLimit(), ri.getHighLimit(), ri.getStep(), ri.getResult()});
         }
     }//GEN-LAST:event_AddFromCollectionButtonActionPerformed
-    public static void validateInput(double lowLimit, double highLimit, double step) throws InvalidInputException{
-        if (lowLimit >= highLimit){
-            throw new InvalidInputException("High Limit must be greater than Low Limit");    
-        }
-        if (lowLimit <= MIN_VALUE || lowLimit >= MAX_VALUE){
-            throw new InvalidInputException("Low Limit must be between 0.000001 and 1000000"); 
-        }
-        if (highLimit <= MIN_VALUE || highLimit >= MAX_VALUE){
-            throw new InvalidInputException("High Limit must be between 0.000001 and 1000000");      
-        }
-        double stepLimit = highLimit - lowLimit;
-        if (step <= MIN_VALUE || step >= stepLimit){
-            throw new InvalidInputException("Step must be between 0.000001 and " + String.valueOf(stepLimit));    
-        }
-    } 
+
     /**
      * @param args the command line arguments
      */
