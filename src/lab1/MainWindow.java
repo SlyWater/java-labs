@@ -204,33 +204,35 @@ public class MainWindow extends javax.swing.JFrame {
 
     private void AddButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddButtonActionPerformed
         double lowLimit, highLimit, step;
-        lowLimit = Double.parseDouble(LowLevelTextField.getText());
-        highLimit = Double.parseDouble(HighLevelTextField.getText());
-        step = Double.parseDouble(StepTextField.getText());
-        DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
-        if(ResultTable.getRowCount() == tableContent.size()){
-            try {
+        try {
+            lowLimit = Double.parseDouble(LowLevelTextField.getText());
+            highLimit = Double.parseDouble(HighLevelTextField.getText());
+            step = Double.parseDouble(StepTextField.getText());
+            DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
+//            if(ResultTable.getRowCount() == tableContent.size()){
                 tableContent.add(new RecIntegral(lowLimit, highLimit, step));
                 tModel.addRow(new Object[] {lowLimit, highLimit, step, 0.0});
                 LowLevelTextField.setText("");
                 HighLevelTextField.setText("");
                 StepTextField.setText("");
-            }
-            catch (InvalidInputException e){
-                JOptionPane.showMessageDialog(this, e.getMessage(), "Error", ERROR_MESSAGE);
-            }
-            catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, e.getMessage() + "\nEnter a number.", "Error", ERROR_MESSAGE);            
-            }
+
+//            }
+        }
+        catch (InvalidInputException e){
+            JOptionPane.showMessageDialog(this, "You entered "+e.getInvalidField() + '\n'+ e.getMessage(), "Error", ERROR_MESSAGE);
+        }
+        catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage() + "\nEnter a number.", "Error", ERROR_MESSAGE);            
         }
     }//GEN-LAST:event_AddButtonActionPerformed
 
     private void DeleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteButtonActionPerformed
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         int row = ResultTable.getSelectedRow();
+        int difference = tableContent.size()-tModel.getRowCount();
         if(row != -1){
             tModel.removeRow(row);
-            tableContent.remove(row);
+            tableContent.remove(difference + row);
         }
     }//GEN-LAST:event_DeleteButtonActionPerformed
 

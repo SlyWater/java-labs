@@ -9,29 +9,23 @@ public class RecIntegral{
     private static final double MIN_VALUE=0.000001;
     private static final double MAX_VALUE=1000000;
     
-    //errors:
-    //1. step>HighLimit-lowLimit
-    //2. incorrect input(ttt,NULL)
-    //3. lowLimit>highLimit
-    //4. limits
     
        public static void validateInput(double lowLimit, double highLimit, double step) throws InvalidInputException{
         if (lowLimit >= highLimit){
-            throw new InvalidInputException("High Limit must be greater than Low Limit");    
+            throw new InvalidInputException("High Limit must be greater than Low Limit", highLimit);    
         }
         if (lowLimit <= MIN_VALUE || lowLimit >= MAX_VALUE){
-            throw new InvalidInputException("Low Limit must be between 0.000001 and 1000000"); 
+            throw new InvalidInputException("Low Limit must be between 0.000001 and 1000000", lowLimit); 
         }
         if (highLimit <= MIN_VALUE || highLimit >= MAX_VALUE){
-            throw new InvalidInputException("High Limit must be between 0.000001 and 1000000");      
+            throw new InvalidInputException("High Limit must be between 0.000001 and 1000000", highLimit);      
         }
         double stepLimit = highLimit - lowLimit;
         if (step < MIN_VALUE || step > stepLimit){
-            throw new InvalidInputException("Step must be between 0.000001 and " + String.valueOf(stepLimit));    
+            throw new InvalidInputException("Step must be between 0.000001 and " + String.valueOf(stepLimit), step);    
         }
     } 
       
-    // otchet v pdf!!!
     public RecIntegral(double lowLimit, double highLimit, double step) throws InvalidInputException{
         validateInput(lowLimit, highLimit, step);
         this.highLimit = highLimit;
@@ -45,9 +39,9 @@ public class RecIntegral{
         double xLast = 0;
         result = 0.;
         for(double x = lowLimit; x < highLimit; x += step){
-            if(x + step <= highLimit){
-                result += step * (Math.cos(x * x) + Math.cos((x + step)*(x + step)))/2;
-            }
+//            if(x + step <= highLimit){
+            result += x + step <= highLimit ?  step * (Math.cos(x * x) + Math.cos((x + step)*(x + step)))/2 : 0;
+//            }
             xLast = x;
         }
         result += (highLimit - xLast) * (Math.cos(xLast * xLast) + Math.cos(highLimit * highLimit)) / 2;
