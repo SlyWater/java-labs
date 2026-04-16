@@ -1,6 +1,8 @@
 package lab1;
 
-public class RecIntegral{
+import java.io.Serializable;
+
+public class RecIntegral implements Serializable{
     private double lowLimit;
     private double highLimit;
     private double step;
@@ -33,7 +35,15 @@ public class RecIntegral{
         this.step = step;
         this.result = 0.0;
     }
-        
+    
+    public RecIntegral(double lowLimit, double highLimit, double step, double result) throws InvalidInputException{
+        validateInput(lowLimit, highLimit, step);
+        this.highLimit = highLimit;
+        this.lowLimit = lowLimit;
+        this.step = step;
+        this.result = result;
+    }
+     
 
     public double calculate(){
         double xLast = 0;
@@ -69,6 +79,9 @@ public class RecIntegral{
     public double getResult(){
         return result;
     }
-    
+    @Override
+    public String toString() {
+        return String.format("%f %f %f %f\n", lowLimit, highLimit, step, result);
+    }
     
 }
