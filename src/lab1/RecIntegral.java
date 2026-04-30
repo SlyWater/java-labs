@@ -1,13 +1,17 @@
 package lab1;
 
-import java.io.Serializable;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
-public class RecIntegral implements Serializable{
+public class RecIntegral implements Externalizable, Runnable{
     private double lowLimit;
     private double highLimit;
     private double step;
     private double result;
     
+    private static final int THREAD_COUNT = 9;
     private static final double MIN_VALUE=0.000001;
     private static final double MAX_VALUE=1000000;
     
@@ -27,7 +31,9 @@ public class RecIntegral implements Serializable{
             throw new InvalidInputException("Step must be between 0.000001 and " + String.valueOf(stepLimit), step);    
         }
     } 
-      
+    public RecIntegral(){
+        
+    }
     public RecIntegral(double lowLimit, double highLimit, double step) throws InvalidInputException{
         validateInput(lowLimit, highLimit, step);
         this.highLimit = highLimit;
@@ -45,24 +51,55 @@ public class RecIntegral implements Serializable{
     }
      
 
-    public double calculate(){
-        double xLast = 0;
-        result = 0.;
-        for(double x = lowLimit; x < highLimit; x += step){
-//            if(x + step <= highLimit){
-            result += x + step <= highLimit ?  step * (Math.cos(x * x) + Math.cos((x + step)*(x + step)))/2 : 0;
-//            }
-            xLast = x;
+    public void calculate(){
+        result = 0.0;
+        for (double x = lowLimit; x < highLimit; x += step) {
+            double nextX = Math.min(x + step, highLimit);
+
+            result += (nextX - x) * (Math.cos(x * x) + Math.cos(nextX * nextX)) / 2.0;
         }
-        result += (highLimit - xLast) * (Math.cos(xLast * xLast) + Math.cos(highLimit * highLimit)) / 2;
-        return result;
+        
+        System.out.println(result);
     }
+    
+    
+    public void calculateMultiThread() throws InterruptedException, InvalidInputException {
+        Thread[] threads = new Thread[THREAD_COUNT];
+        RecIntegral[] parts = new RecIntegral[THREAD_COUNT];
+
+        double length = (highLimit - lowLimit) / THREAD_COUNT; 
+
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            double partLow = lowLimit + i * length;
+            double partHigh = lowLimit + (i + 1) * length;
+
+            parts[i] = new RecIntegral(partLow, partHigh, step);
+
+            threads[i] = new Thread(parts[i]);
+            threads[i].start();
+        }
+
+        result = 0.0;
+
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            threads[i].join();
+            result += parts[i].getResult();
+        }
+    }
+       
+    @Override
+    public void run(){
+        calculate();
+    }
+    
     public void setLowLimit(double ll){
         lowLimit = ll;
     }
+    
     public void setHighLimit(double hl){
         highLimit = hl;
     }
+    
     public void setStep(double s){
         step = s;
     }
@@ -70,18 +107,37 @@ public class RecIntegral implements Serializable{
     public double getLowLimit(){
         return lowLimit;
     }
+    
     public double getHighLimit(){
         return highLimit;
     }
+    
     public double getStep(){
         return step;
     }
+    
     public double getResult(){
         return result;
     }
+    
     @Override
     public String toString() {
         return String.format("%f %f %f %f\n", lowLimit, highLimit, step, result);
     }
     
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException{
+        out.writeObject(this.getLowLimit());     
+        out.writeObject(this.getHighLimit());
+        out.writeObject(this.getStep());
+        out.writeObject(this.getResult());
+    }
+    
+    @Override
+    public void readExternal(ObjectInput in) throws ClassNotFoundException, IOException{
+        lowLimit = (Double) in.readObject();
+        highLimit = (Double) in.readObject();
+        step = (Double) in.readObject();
+        result = (Double) in.readObject();
+    }
 }

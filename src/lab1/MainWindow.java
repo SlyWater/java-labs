@@ -368,6 +368,7 @@ public class MainWindow extends javax.swing.JFrame {
     }//GEN-LAST:event_ClearTableButtonActionPerformed
 
     private void CalculateButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CalculateButtonActionPerformed
+        
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         int row = ResultTable.getSelectedRow();
         if(row != -1 && ResultTable.getRowCount() == tableContent.size()){
@@ -377,7 +378,22 @@ public class MainWindow extends javax.swing.JFrame {
                 double step = Double.parseDouble(tModel.getValueAt(row, 2).toString());
                 RecIntegral ri = new RecIntegral(lowLimit, highLimit, step);
                 tableContent.set(row, ri);
-                tModel.setValueAt(tableContent.get(row).calculate(), row, 3);
+                
+                new Thread(() -> {
+                    try {
+                        ri.calculateMultiThread();
+
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            tModel.setValueAt(ri.getResult(), row, 3);
+                        });
+
+                    } catch (InterruptedException | InvalidInputException e) {
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", ERROR_MESSAGE);
+                        });
+                    }
+                }).start();
+
             }
             catch (InvalidInputException | NumberFormatException e) {
                 JOptionPane.showMessageDialog(this, e.getMessage() + "\nIncorrect data in the table", "Error", ERROR_MESSAGE);
@@ -466,4 +482,3 @@ public class MainWindow extends javax.swing.JFrame {
     private javax.swing.JMenuItem saveTxtMenuItem;
     // End of variables declaration//GEN-END:variables
 }
-
