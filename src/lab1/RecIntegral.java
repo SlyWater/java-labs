@@ -4,8 +4,11 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
-public class RecIntegral implements Externalizable, Runnable{
+public class RecIntegral implements Externalizable, Callable<Double>{
     private double lowLimit;
     private double highLimit;
     private double step;
@@ -51,7 +54,7 @@ public class RecIntegral implements Externalizable, Runnable{
     }
      
 
-    public void calculate(){
+    public Double calculate(){
         result = 0.0;
         for (double x = lowLimit; x < highLimit; x += step) {
             double nextX = Math.min(x + step, highLimit);
@@ -60,14 +63,16 @@ public class RecIntegral implements Externalizable, Runnable{
         }
         
         System.out.println(result);
+        return result;
     }
     
     
-    public void calculateMultiThread() throws InterruptedException, InvalidInputException {
+    public void calculateMultiThread() throws InterruptedException, InvalidInputException, ExecutionException {
         Thread[] threads = new Thread[THREAD_COUNT];
         RecIntegral[] parts = new RecIntegral[THREAD_COUNT];
+        double length = (highLimit - lowLimit) / THREAD_COUNT;
+        FutureTask<Double>[] tasks = new FutureTask[THREAD_COUNT];
 
-        double length = (highLimit - lowLimit) / THREAD_COUNT; 
 
         for (int i = 0; i < THREAD_COUNT; i++) {
             double partLow = lowLimit + i * length;
@@ -75,21 +80,23 @@ public class RecIntegral implements Externalizable, Runnable{
 
             parts[i] = new RecIntegral(partLow, partHigh, step);
 
-            threads[i] = new Thread(parts[i]);
+            tasks[i] = new FutureTask<>(parts[i]);
+            threads[i] = new Thread(tasks[i]);
             threads[i].start();
-        }
-
+        }  
+        
         result = 0.0;
 
         for (int i = 0; i < THREAD_COUNT; i++) {
-            threads[i].join();
-            result += parts[i].getResult();
+              result += tasks[i].get();
+//            threads[i].join();
+//            result += parts[i].getResult();
         }
     }
        
     @Override
-    public void run(){
-        calculate();
+    public Double call() throws Exception{
+        return calculate();
     }
     
     public void setLowLimit(double ll){
