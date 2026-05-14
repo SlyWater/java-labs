@@ -1,35 +1,32 @@
 package lab1;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.nio.charset.StandardCharsets;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 
 public class ComputeClient {
-    private static final int BUFFER_SIZE = 1024;
-
     public static void main(String[] args) {
         String host = args.length > 0 ? args[0] : "127.0.0.1";
         int port = args.length > 1 ? Integer.parseInt(args[1]) : ComputeServer.DEFAULT_PORT;
 
-        try (DatagramSocket socket = new DatagramSocket()) {
-            InetAddress serverAddress = InetAddress.getByName(host);
-            send(socket, serverAddress, port, "REGISTER");
-            System.out.println("Compute client registered on " + host + ":" + port);
+        try (Socket socket = new Socket(host, port);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
 
-            byte[] buffer = new byte[BUFFER_SIZE];
-            while (true) {
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                socket.receive(packet);
-                String message = new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.UTF_8);
-                handleTask(socket, packet.getAddress(), packet.getPort(), message);
+            System.out.println("Compute client connected to " + host + ":" + port);
+            System.out.println("Local client port: " + socket.getLocalPort());
+
+            String message;
+            while ((message = in.readLine()) != null) {
+                handleTask(out, message);
             }
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
     }
 
-    private static void handleTask(DatagramSocket socket, InetAddress address, int port, String message) throws Exception {
+    private static void handleTask(PrintWriter out, String message) {
         String[] parts = message.split(";", 5);
         if (parts.length != 5 || !"TASK".equals(parts[0])) {
             return;
@@ -43,15 +40,9 @@ public class ComputeClient {
 
             RecIntegral recIntegral = RecIntegral.createCalculationPart(lowLimit, highLimit, step);
             recIntegral.calculateMultiThread();
-            send(socket, address, port, "RESULT;" + taskId + ";" + recIntegral.getResult());
+            out.println("RESULT;" + taskId + ";" + recIntegral.getResult());
         } catch (Exception e) {
-            send(socket, address, port, "ERROR;" + taskId + ";" + e.getMessage().replace(";", ","));
+            out.println("ERROR;" + taskId + ";" + e.getMessage().replace(";", ","));
         }
-    }
-
-    private static void send(DatagramSocket socket, InetAddress address, int port, String message) throws Exception {
-        byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
-        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, address, port);
-        socket.send(packet);
     }
 }

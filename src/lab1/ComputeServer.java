@@ -1,13 +1,14 @@
 package lab1;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -20,37 +21,38 @@ import java.util.concurrent.TimeoutException;
 
 public class ComputeServer implements Closeable {
     public static final int DEFAULT_PORT = 5000;
-    private static final int BUFFER_SIZE = 1024;
     private static final int CLIENT_TIMEOUT_SECONDS = 30;
 
-    private final DatagramSocket socket;
-    private final CopyOnWriteArrayList<ClientInfo> clients = new CopyOnWriteArrayList<>();
+    private final ServerSocket serverSocket;
+    private final CopyOnWriteArrayList<ClientConnection> clients = new CopyOnWriteArrayList<>();
     private final ConcurrentHashMap<String, CompletableFuture<Double>> pendingResults = new ConcurrentHashMap<>();
-    private final Thread listenerThread;
+    private final Thread acceptThread;
     private volatile boolean running = true;
 
-    public ComputeServer(int port) throws SocketException {
-        socket = new DatagramSocket(port);
-        listenerThread = new Thread(this::listen, "udp-compute-server");
-        listenerThread.setDaemon(true);
-        listenerThread.start();
+    public ComputeServer(int port) throws IOException {
+        serverSocket = new ServerSocket(port);
+        acceptThread = new Thread(this::acceptClients, "tcp-compute-server");
+        acceptThread.setDaemon(true);
+        acceptThread.start();
     }
 
     public int getPort() {
-        return socket.getLocalPort();
+        return serverSocket.getLocalPort();
     }
 
     public int getClientCount() {
+        removeClosedClients();
         return clients.size();
     }
 
     public double calculate(double lowLimit, double highLimit, double step) throws Exception {
+        removeClosedClients();
         if (clients.isEmpty()) {
-            throw new IllegalStateException("No compute clients registered on UDP port " + getPort());
+            throw new IllegalStateException("No compute clients connected on TCP port " + getPort());
         }
 
         String taskGroupId = UUID.randomUUID().toString();
-        List<ClientInfo> taskClients = new ArrayList<>(clients);
+        List<ClientConnection> taskClients = new ArrayList<>(clients);
         List<CompletableFuture<Double>> futures = new ArrayList<>();
 
         double length = (highLimit - lowLimit) / taskClients.size();
@@ -62,7 +64,7 @@ public class ComputeServer implements Closeable {
                 CompletableFuture<Double> future = new CompletableFuture<>();
                 pendingResults.put(taskId, future);
                 futures.add(future);
-                send(taskClients.get(i), "TASK;" + taskId + ";" + partLow + ";" + partHigh + ";" + step);
+                taskClients.get(i).send("TASK;" + taskId + ";" + partLow + ";" + partHigh + ";" + step);
             }
 
             double result = 0.0;
@@ -84,34 +86,31 @@ public class ComputeServer implements Closeable {
                     pendingResults.remove(taskId);
                 }
             }
+            removeClosedClients();
         }
     }
 
-    private void listen() {
-        byte[] buffer = new byte[BUFFER_SIZE];
+    private void acceptClients() {
         while (running) {
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             try {
-                socket.receive(packet);
-                String message = new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.UTF_8);
-                handleMessage(packet.getAddress(), packet.getPort(), message);
+                Socket socket = serverSocket.accept();
+                ClientConnection client = new ClientConnection(socket);
+                clients.add(client);
+                client.startReader();
             } catch (SocketException e) {
                 if (running) {
                     e.printStackTrace();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                if (running) {
+                    e.printStackTrace();
+                }
             }
         }
     }
 
-    private void handleMessage(InetAddress address, int port, String message) {
+    private void handleMessage(String message) {
         String[] parts = message.split(";", 3);
-        if ("REGISTER".equals(parts[0])) {
-            registerClient(address, port);
-            return;
-        }
-
         if ("RESULT".equals(parts[0]) && parts.length == 3) {
             CompletableFuture<Double> future = pendingResults.remove(parts[1]);
             if (future != null) {
@@ -128,46 +127,73 @@ public class ComputeServer implements Closeable {
         }
     }
 
-    private void registerClient(InetAddress address, int port) {
-        ClientInfo client = new ClientInfo(address, port);
-        if (!clients.contains(client)) {
-            clients.add(client);
-        }
-    }
-
-    private void send(ClientInfo client, String message) throws IOException {
-        byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
-        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, client.address, client.port);
-        socket.send(packet);
+    private void removeClosedClients() {
+        clients.removeIf(ClientConnection::isClosed);
     }
 
     @Override
     public void close() {
         running = false;
-        socket.close();
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (ClientConnection client : clients) {
+            client.close();
+        }
     }
 
-    private static class ClientInfo {
-        private final InetAddress address;
-        private final int port;
+    private class ClientConnection implements Closeable {
+        private final Socket socket;
+        private final BufferedReader in;
+        private final PrintWriter out;
 
-        private ClientInfo(InetAddress address, int port) {
-            this.address = address;
-            this.port = port;
+        private ClientConnection(Socket socket) throws IOException {
+            this.socket = socket;
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new PrintWriter(socket.getOutputStream(), true);
         }
 
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof ClientInfo)) {
-                return false;
+        private void startReader() {
+            Thread thread = new Thread(() -> {
+                try {
+                    String message;
+                    while ((message = in.readLine()) != null) {
+                        handleMessage(message);
+                    }
+                } catch (IOException e) {
+                    if (running && !isClosed()) {
+                        e.printStackTrace();
+                    }
+                } finally {
+                    close();
+                    clients.remove(this);
+                }
+            }, "tcp-compute-client-reader");
+            thread.setDaemon(true);
+            thread.start();
+        }
+
+        private synchronized void send(String message) throws IOException {
+            out.println(message);
+            if (out.checkError()) {
+                close();
+                throw new IOException("Failed to send task to compute client");
             }
-            ClientInfo other = (ClientInfo) obj;
-            return port == other.port && address.equals(other.address);
+        }
+
+        private boolean isClosed() {
+            return socket.isClosed() || !socket.isConnected();
         }
 
         @Override
-        public int hashCode() {
-            return 31 * address.hashCode() + port;
+        public void close() {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

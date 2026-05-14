@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -254,9 +253,9 @@ public class MainWindow extends javax.swing.JFrame {
     private void startComputeServer() {
         try {
             computeServer = new ComputeServer(ComputeServer.DEFAULT_PORT);
-            setTitle("RecIntegral UDP Server - port " + computeServer.getPort());
-        } catch (SocketException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), "UDP Server Error", ERROR_MESSAGE);
+            setTitle("RecIntegral TCP Server - port " + computeServer.getPort());
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "TCP Server Error", ERROR_MESSAGE);
         }
     }
     
@@ -395,7 +394,7 @@ public class MainWindow extends javax.swing.JFrame {
                 new Thread(() -> {
                     try {
                         if (computeServer == null) {
-                            throw new IllegalStateException("UDP server is not running");
+                            throw new IllegalStateException("TCP server is not running");
                         }
                         double result = computeServer.calculate(ri.getLowLimit(), ri.getHighLimit(), ri.getStep());
                         RecIntegral calculated = new RecIntegral(ri.getLowLimit(), ri.getHighLimit(), ri.getStep(), result);
