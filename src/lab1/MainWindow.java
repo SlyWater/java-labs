@@ -3,15 +3,14 @@ package lab1;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.nio.file.Path;
+import java.net.SocketException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import javax.swing.JFileChooser;
 import javax.swing.table.DefaultTableModel;
@@ -26,9 +25,11 @@ public class MainWindow extends javax.swing.JFrame {
 //    private static final 
 
     private final File CURRENT_DIR = Paths.get("").toAbsolutePath().toFile();
+    private ComputeServer computeServer;
 
     public MainWindow() {
         initComponents();
+        startComputeServer();
     }
 
     @SuppressWarnings("unchecked")
@@ -249,6 +250,15 @@ public class MainWindow extends javax.swing.JFrame {
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
         tModel.setRowCount(0);
     }
+
+    private void startComputeServer() {
+        try {
+            computeServer = new ComputeServer(ComputeServer.DEFAULT_PORT);
+            setTitle("RecIntegral UDP Server - port " + computeServer.getPort());
+        } catch (SocketException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "UDP Server Error", ERROR_MESSAGE);
+        }
+    }
     
     private void addFromCollection() {
         DefaultTableModel tModel = (DefaultTableModel) ResultTable.getModel();
@@ -257,12 +267,30 @@ public class MainWindow extends javax.swing.JFrame {
             tModel.addRow(new Object[] {ri.getLowLimit(), ri.getHighLimit(), ri.getStep(), ri.getResult()});
         }
     }
+
+    private JFileChooser createFileChooser(String description, String extension) {
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(description, extension);
+        JFileChooser chooser = new JFileChooser(CURRENT_DIR);
+        chooser.setFileFilter(filter);
+        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        chooser.setAcceptAllFileFilterUsed(false);
+        return chooser;
+    }
+
+    private File getFileWithExtension(JFileChooser chooser, String extension) throws IOException {
+        File file = chooser.getSelectedFile();
+        if (file.isDirectory()) {
+            throw new IOException("Select a file name, not a directory");
+        }
+        if (!file.getName().toLowerCase().endsWith("." + extension)) {
+            file = new File(file.getParentFile(), file.getName() + "." + extension);
+        }
+        return file;
+    }
     
     private void loadBinMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadBinMenuItemActionPerformed
         try {
-            FileNameExtensionFilter jnef = new FileNameExtensionFilter("SER file","ser");
-            JFileChooser jfc = new JFileChooser(CURRENT_DIR);
-            jfc.setFileFilter(jnef);
+            JFileChooser jfc = createFileChooser("SER file", "ser");
             if(jfc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 File file = jfc.getSelectedFile();
                 ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
@@ -282,15 +310,10 @@ public class MainWindow extends javax.swing.JFrame {
 
     private void loadTxtMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadTxtMenuItemActionPerformed
         try {
-            FileNameExtensionFilter jnef = new FileNameExtensionFilter("TXT file","txt");
-            JFileChooser jfc = new JFileChooser(CURRENT_DIR);
-            jfc.setFileFilter(jnef);
+            JFileChooser jfc = createFileChooser("TXT file", "txt");
             if(jfc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 File file = jfc.getSelectedFile();
-                List<String> lines;
-                try (FileReader fileR = new FileReader(file)) {
-                    lines = fileR.readAllLines();
-                }
+                List<String> lines = Files.readAllLines(file.toPath());
                 tableContent.clear();
                 for (String line : lines) {
                     String[] tokens = line.split(" ");
@@ -315,14 +338,9 @@ public class MainWindow extends javax.swing.JFrame {
 
     private void saveBinMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveBinMenuItemActionPerformed
         try {
-            FileNameExtensionFilter jnef = new FileNameExtensionFilter("SER file","ser");
-            JFileChooser jfc = new JFileChooser(CURRENT_DIR);
-            jfc.setFileFilter(jnef);
+            JFileChooser jfc = createFileChooser("SER file", "ser");
             if(jfc.showSaveDialog(this)==JFileChooser.APPROVE_OPTION){
-                File file = jfc.getSelectedFile();
-                if (!file.getName().endsWith(".ser")) {
-                    file = new File(file.getAbsolutePath() + ".ser");
-                }
+                File file = getFileWithExtension(jfc, "ser");
                 
                 try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
                     out.writeObject(tableContent);
@@ -336,14 +354,9 @@ public class MainWindow extends javax.swing.JFrame {
 
     private void saveTxtMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveTxtMenuItemActionPerformed
         try {
-            FileNameExtensionFilter jnef = new FileNameExtensionFilter("TXT file","txt");
-            JFileChooser jfc = new JFileChooser(CURRENT_DIR);
-            jfc.setFileFilter(jnef);
+            JFileChooser jfc = createFileChooser("TXT file", "txt");
             if(jfc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                File file = jfc.getSelectedFile();
-                if (!file.getName().endsWith(".txt")) {
-                    file = new File(file.getAbsolutePath() + ".txt");
-                }
+                File file = getFileWithExtension(jfc, "txt");
                 try (FileWriter fileW = new FileWriter(file)) {
                     String string = "";
                     for(RecIntegral ri: tableContent){
@@ -381,13 +394,18 @@ public class MainWindow extends javax.swing.JFrame {
                 
                 new Thread(() -> {
                     try {
-                        ri.calculateMultiThread();
+                        if (computeServer == null) {
+                            throw new IllegalStateException("UDP server is not running");
+                        }
+                        double result = computeServer.calculate(ri.getLowLimit(), ri.getHighLimit(), ri.getStep());
+                        RecIntegral calculated = new RecIntegral(ri.getLowLimit(), ri.getHighLimit(), ri.getStep(), result);
+                        tableContent.set(row, calculated);
 
                         javax.swing.SwingUtilities.invokeLater(() -> {
-                            tModel.setValueAt(ri.getResult(), row, 3);
+                            tModel.setValueAt(result, row, 3);
                         });
 
-                    } catch (InterruptedException | InvalidInputException e) {
+                    } catch (Exception e) {
                         javax.swing.SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(this, e.getMessage(), "Error", ERROR_MESSAGE);
                         });

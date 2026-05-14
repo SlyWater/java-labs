@@ -39,18 +39,30 @@ public class RecIntegral implements Externalizable, Callable<Double>{
     }
     public RecIntegral(double lowLimit, double highLimit, double step) throws InvalidInputException{
         validateInput(lowLimit, highLimit, step);
-        this.highLimit = highLimit;
-        this.lowLimit = lowLimit;
-        this.step = step;
-        this.result = 0.0;
+        setValues(lowLimit, highLimit, step, 0.0);
     }
     
-    public RecIntegral(double lowLimit, double highLimit, double step, double result) throws InvalidInputException{
-        validateInput(lowLimit, highLimit, step);
+    private RecIntegral(double lowLimit, double highLimit, double step, boolean validate) throws InvalidInputException{
+        if (validate) {
+            validateInput(lowLimit, highLimit, step);
+        }
+        setValues(lowLimit, highLimit, step, 0.0);
+    }
+    
+    public static RecIntegral createCalculationPart(double lowLimit, double highLimit, double step) throws InvalidInputException {
+        return new RecIntegral(lowLimit, highLimit, step, false);
+    }
+    
+    private void setValues(double lowLimit, double highLimit, double step, double result) {
         this.highLimit = highLimit;
         this.lowLimit = lowLimit;
         this.step = step;
         this.result = result;
+    }
+    
+    public RecIntegral(double lowLimit, double highLimit, double step, double result) throws InvalidInputException{
+        validateInput(lowLimit, highLimit, step);
+        setValues(lowLimit, highLimit, step, result);
     }
      
 
@@ -78,7 +90,7 @@ public class RecIntegral implements Externalizable, Callable<Double>{
             double partLow = lowLimit + i * length;
             double partHigh = lowLimit + (i + 1) * length;
 
-            parts[i] = new RecIntegral(partLow, partHigh, step);
+            parts[i] = RecIntegral.createCalculationPart(partLow, partHigh, step);
 
             tasks[i] = new FutureTask<>(parts[i]);
             threads[i] = new Thread(tasks[i]);
